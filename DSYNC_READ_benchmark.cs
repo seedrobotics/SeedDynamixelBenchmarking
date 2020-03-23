@@ -41,7 +41,7 @@ namespace SeedDynamixelBenchmarking
                 run_failed = false;
 
                 // get reply
-                byte[] reply = dync.get_dyn_reply(port, (byte)(Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + l_dyn_ids.Count * b_read_len), 40000, ref bytes_received, ref inner_cycle_time);
+                byte[] reply = dync.get_dyn_reply(port, 0, (byte)(Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + l_dyn_ids.Count * b_read_len), 40000, ref bytes_received, ref inner_cycle_time);
 
                 outer_timer.Stop();
                 if (reply != null) {           

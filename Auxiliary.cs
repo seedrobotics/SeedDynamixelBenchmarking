@@ -3,12 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO.Ports;
 using DynamixelCommander;
 
@@ -26,13 +20,33 @@ namespace SeedDynamixelBenchmarking
             foreach(byte dyn_id in dyn_ids) {
                 byte[] packet = cg.generate_read_packet(dyn_id, ADDR_RETURN_DELAY_TIME, 1);
 
+                port.ReadExisting(); // purge any bytes in the incomming buffer
                 port.Write(packet, 0, packet.Length);
 
-                byte[] reply = cg.get_dyn_reply(port, Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + 1, 40000, ref reply_size, ref reply_time);
+                byte[] reply = cg.get_dyn_reply(port, dyn_id, Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + 1, 40000, ref reply_size, ref reply_time);
 
                 if (reply == null)
                 {
-                    Console.WriteLine("ERROR: Unable to check Return Delay time configuration for ID {0} (either no reply or reply was not as expected)", dyn_id);
+                    Console.Write("ERROR: Unable to check Return Delay time configuration for ID {0} (Reason: ", dyn_id);
+
+                    switch (cg.last_get_dyn_reply_error)
+                    {
+                        case Dynamixel1CommandGenerator.en_reply_result.TIMEOUT:
+                            Console.WriteLine(" Timeout)");
+                            break;
+
+                        case Dynamixel1CommandGenerator.en_reply_result.MISTMATCHED_DEVICE_ID:
+                            Console.WriteLine(" Device ID mismatch)");
+                            break;
+
+                        case Dynamixel1CommandGenerator.en_reply_result.INVALID_COMMAND_LEN:
+                            Console.WriteLine(" LEN error)");
+                            break;
+
+                        default:
+                            Console.WriteLine(" Other/unhandled)");
+                            break;
+                    }
                 } else
                 {
                      int ret_delay_time = cg.get_byte_value_from_reply(reply);
@@ -68,9 +82,10 @@ namespace SeedDynamixelBenchmarking
 
                 byte[] dyn_command = dync.generate_ping_packet(b);
 
+                port.ReadExisting(); // purge any bytes in the incomming buffer
                 port.Write(dyn_command, 0, dyn_command.Length);
 
-                byte[] reply = dync.get_dyn_reply(port, Dynamixel1CommandGenerator.DYN1_REPLY_SZ_PING, 20000, ref bytes_received, ref reply_time_usecs);
+                byte[] reply = dync.get_dyn_reply(port, b, Dynamixel1CommandGenerator.DYN1_REPLY_SZ_PING, 20000, ref bytes_received, ref reply_time_usecs);
                 if (reply != null)
                 {
                     Console.WriteLine("\rFound ID: {0,3}, replied in {1,5} uSecs)", b, reply_time_usecs, reply_time_ticks);

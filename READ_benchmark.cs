@@ -56,9 +56,11 @@ namespace SeedDynamixelBenchmarking
 
                     // make READ request
                     byte[] command = dync.generate_read_packet(b_id, b_read_startaddr, b_read_len);
+
+                    port.ReadExisting(); // purge any bytes in the incomming buffer
                     port.Write(command, 0, command.Length);
 
-                    byte[] reply = dync.get_dyn_reply(port, (byte)(Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + b_read_len), 40000, ref bytes_received, ref reply_time_innercycle);
+                    byte[] reply = dync.get_dyn_reply(port, b_id, (byte)(Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + b_read_len), 40000, ref bytes_received, ref reply_time_innercycle);
                     if (reply != null)
                     {
                         if (out_writter != null) out_writter.Write("{0},", reply_time_innercycle);
@@ -79,8 +81,28 @@ namespace SeedDynamixelBenchmarking
                     {
                         // run fails
                         run_failed = true;
-                        port.ReadExisting(); // purge port
-                        if (out_writter != null) out_writter.WriteLine("FAILED");
+                        if (out_writter != null)
+                        {
+                            Console.Write("READ fails at ID: {0}. Reason: ", b_id);
+                            switch (dync.last_get_dyn_reply_error)
+                            {
+                                case Dynamixel1CommandGenerator.en_reply_result.TIMEOUT:
+                                    Console.WriteLine("Timeout");
+                                    break;
+
+                                case Dynamixel1CommandGenerator.en_reply_result.MISTMATCHED_DEVICE_ID:
+                                    Console.WriteLine("ID mismatch");
+                                    break;
+
+                                case Dynamixel1CommandGenerator.en_reply_result.INVALID_COMMAND_LEN:
+                                    Console.WriteLine("LEN error");
+                                    break;
+
+                                default:
+                                    Console.WriteLine("Other /unhandled");
+                                    break;
+                            }
+                        }
                         break;
                     }
                 }

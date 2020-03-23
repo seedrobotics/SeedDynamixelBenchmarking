@@ -58,6 +58,7 @@ namespace SeedDynamixelBenchmarking
                     out_writter.Write("BULK READ,{0},", cycle_nr);
                 }
 
+                port.ReadExisting(); // purge any bytes in the incomming buffer
                 port.Write(command, 0, command.Length);
 
                 // get replies
@@ -65,7 +66,7 @@ namespace SeedDynamixelBenchmarking
                 {
                     run_failed = false;
 
-                    byte[] reply = dync.get_dyn_reply(port, (byte)(Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + b_read_len), 40000, ref bytes_received, ref inner_cycle_time);
+                    byte[] reply = dync.get_dyn_reply(port, b_id, (byte)(Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + b_read_len), 40000, ref bytes_received, ref inner_cycle_time);
                     if (reply != null)
                     {
                         if (out_writter != null) out_writter.Write("{0},", inner_cycle_time);
@@ -86,8 +87,28 @@ namespace SeedDynamixelBenchmarking
                     {
                         // run fails
                         run_failed = true;
-                        port.ReadExisting(); // purge port
-                        if (out_writter != null) out_writter.WriteLine("FAILED");
+                        if (out_writter != null) {
+                            Console.Write("BULK_READ fails at getting reply from ID: {0}. Reason: ", b_id);
+
+                            switch (dync.last_get_dyn_reply_error)
+                            {
+                                case Dynamixel1CommandGenerator.en_reply_result.TIMEOUT:
+                                    Console.WriteLine("FAILED Timeout");
+                                    break;
+
+                                case Dynamixel1CommandGenerator.en_reply_result.MISTMATCHED_DEVICE_ID:
+                                    Console.WriteLine("FAILED ID mismatch");
+                                    break;
+
+                                case Dynamixel1CommandGenerator.en_reply_result.INVALID_COMMAND_LEN:
+                                    Console.WriteLine("FAILED LEN error");
+                                    break;
+
+                                default:
+                                    Console.WriteLine("FAILED Other /unhandled");
+                                    break;
+                            }
+                        }
                         break;
                     }
                 }
@@ -103,6 +124,10 @@ namespace SeedDynamixelBenchmarking
                 }
                 else
                 {
+                    /* if run failed wait a few milisecs to attempt to get pending data and re-sync */
+                    System.Threading.Thread.Sleep(50);
+                    port.ReadExisting(); // purge port
+
                     failed_runs++;
                 }
 

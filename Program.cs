@@ -72,7 +72,7 @@ namespace SeedDynamixelBenchmarking
                     foreach (byte b_id in l_dyn_ids_to_query) { Console.Write("[{0}] ", b_id); }
                     Console.WriteLine();
                     Console.WriteLine();
-                    
+
                     if (s_outfile_name.Trim() != "")
                     {
                         out_writer = new StreamWriter(s_outfile_name, true);
@@ -80,14 +80,25 @@ namespace SeedDynamixelBenchmarking
                         out_writer.WriteLine("''''''''''' {0}", DateTime.Now.ToString());
                     }
 
-                    if (e_test_type == en_TestType.Extended)
+                    long n_cycles = 0;
+                    while (true)
                     {
-                        run_dsyncread_benchmark(ref c_port, ref l_dyn_ids_to_query, b_ctb_read_start_addr, b_ctb_read_len, out_writer);
-                    }
-                    else {
-                        run_READ_benchmark(ref c_port, ref l_dyn_ids_to_query, b_ctb_read_start_addr, b_ctb_read_len, out_writer);
-                        run_BULK_READ_benchmark(ref c_port, ref l_dyn_ids_to_query, b_ctb_read_start_addr, b_ctb_read_len, out_writer);
-                    }                    
+                        Console.WriteLine("-------------- OVERALL CYCLE {0} (total sub cycles {1})", n_cycles, n_cycles * 400);
+
+                        if (e_test_type == en_TestType.Extended)
+                        {
+                            run_dsyncread_benchmark(ref c_port, ref l_dyn_ids_to_query, b_ctb_read_start_addr, b_ctb_read_len, out_writer);
+                        }
+                        else {
+                            run_READ_benchmark(ref c_port, ref l_dyn_ids_to_query, b_ctb_read_start_addr, b_ctb_read_len, out_writer);
+                            run_BULK_READ_benchmark(ref c_port, ref l_dyn_ids_to_query, b_ctb_read_start_addr, b_ctb_read_len, out_writer);
+                        }
+
+                        n_cycles++;
+
+                        System.Threading.Thread.Sleep(3000);
+                        c_port.ReadExisting();
+                    }               
                 }
 
                 if (out_writer != null)

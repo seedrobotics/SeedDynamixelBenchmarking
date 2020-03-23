@@ -71,6 +71,8 @@ namespace DynamixelCommander
             PACKET_COMPLETE            
         };
 
+        public enum en_reply_result { NONE, MISTMATCHED_DEVICE_ID, INVALID_COMMAND_LEN, INVALID_CHECKSUM, TIMEOUT };
+        public en_reply_result last_get_dyn_reply_error = en_reply_result.NONE;
 
         public byte[] generate_dyn_packet(byte ID, byte INSTRUCTION, List<byte> PARAMS)
         {
@@ -240,14 +242,16 @@ namespace DynamixelCommander
             return out_array;
         }
 
-        public byte[] get_dyn_reply(SerialPort port, byte expected_reply_size, long timeout_uSecs, ref int out_reply_size, ref long out_elapsed_usecs)
+        public byte[] get_dyn_reply(SerialPort port, byte expected_id, byte expected_reply_size, long timeout_uSecs, ref int out_reply_size, ref long out_elapsed_usecs)
         {
+            last_get_dyn_reply_error = en_reply_result.NONE;
+
             StopWatchMicrosecs timer = new StopWatchMicrosecs();
 
             timer.Start();
 
             byte[] received_bytes = new byte[expected_reply_size];
-            int params_to_receive = 0; byte in_byte = 0, dyn_id = 0;
+            int params_to_receive = 0; byte in_byte = 0;
             out_reply_size = 0; int discarded_bytes = 0;
 
             enReplyState e_state = enReplyState.SEEKING_1ST_FF;
@@ -256,6 +260,8 @@ namespace DynamixelCommander
             {
                 if (port.BytesToRead > 0)
                 {
+                    // reset timer to cope with replies that send bytes ever so sparsely
+                    timer.Restart();
                     in_byte = (byte)port.ReadByte();
 
                     switch(e_state)
@@ -290,7 +296,21 @@ namespace DynamixelCommander
                             } else
                             {
                                 //Debug.Print("Reply from ID {0}", in_byte);
-                                dyn_id = in_byte;
+                                if (in_byte != expected_id)
+                                {
+                                    Debug.Write(string.Format("Expected ID {0}, instead received reply from ID {1}\n", expected_id, in_byte));
+
+                                    Debug.Write(string.Format("[id received: {0}] ", in_byte));
+                                    do
+                                    {
+                                        while (port.BytesToRead > 0) { Debug.Write(string.Format("[{0:x}] ", port.ReadByte())); }
+                                    } while (timer.ElapsedMicroseconds < timeout_uSecs);
+                                    timer.Stop();
+                                    Debug.Write("\n");
+                                    last_get_dyn_reply_error = en_reply_result.MISTMATCHED_DEVICE_ID;
+                                    return null;
+
+                                }
                                 e_state = enReplyState.SEEKING_LEN;
                             }
                             break;
@@ -298,7 +318,16 @@ namespace DynamixelCommander
                         case enReplyState.SEEKING_LEN:
                             if (expected_reply_size - 4 != in_byte)
                             {
-                                Debug.Print("Dyn ID {2}: Length in packet and expected length differ: in packet {0}(+4) / expected {1}", in_byte, expected_reply_size, dyn_id);
+                                Debug.Write(string.Format("Dyn ID {2}: Length in packet and expected length differ: in packet {0}(+4) / expected {1}\n", in_byte, expected_reply_size, expected_id));
+
+                                Debug.Write(string.Format("[id: {0}] [len: {1}] ", expected_id, in_byte));
+                                do
+                                {
+                                    if (port.BytesToRead > 0) { Debug.Write(string.Format("[{0:x}] ", port.ReadByte())); }
+                                } while (timer.ElapsedMicroseconds < timeout_uSecs && --in_byte > 0); // print up to the LEN chars of this reply.
+                                timer.Stop();
+                                Debug.Write("\n");
+                                last_get_dyn_reply_error = en_reply_result.INVALID_COMMAND_LEN;
                                 return null;
                             } else
                             {
@@ -344,7 +373,8 @@ namespace DynamixelCommander
 
             if (out_elapsed_usecs > timeout_uSecs || out_reply_size < expected_reply_size) // timeout and/or not eneough bytes
             {
-                Debug.Print("Dyn ID: {3}: did not return properly: elapsed time {0}uSecs, bytes received {1}/expected {2}", out_elapsed_usecs, out_reply_size, expected_reply_size, dyn_id);
+                last_get_dyn_reply_error = en_reply_result.TIMEOUT;
+                Debug.Print("Expected Dyn ID: {3}: did not return properly: elapsed time {0}uSecs, bytes received {1}/expected {2}", out_elapsed_usecs, out_reply_size, expected_reply_size, expected_id);
 
                 // waiting pattern to empty the buffer
                 timer.Restart();
