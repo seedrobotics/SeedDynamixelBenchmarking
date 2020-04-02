@@ -4,19 +4,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO.Ports;
-using DynamixelCommander;
+using Dynamixel1Commander;
 
 namespace SeedDynamixelBenchmarking
 {
     partial class Program
     {
-        static void run_dsyncread_benchmark(ref SerialPort port, ref List<byte> l_dyn_ids, byte b_read_startaddr, byte b_read_len, System.IO.TextWriter out_writter)
+        static void run_dyn1_dsyncread_benchmark(ref SerialPort port, ref List<byte> l_dyn_ids, byte b_read_startaddr, byte b_read_len, System.IO.TextWriter out_writter)
         {
-            Console.WriteLine("#3 Read multiple devices using one DSYNC_READ command:");
+            Console.WriteLine("#3 DYNAMIXEL 1: Read multiple devices using one DSYNC_READ command:");
             Console.WriteLine("==========================================");
             Console.WriteLine();
 
-            check_return_delay_times(ref port, l_dyn_ids);
+            dyn1_check_return_delay_times(ref port, l_dyn_ids);
 
             if (out_writter != null) out_writter.WriteLine("DSYNC_READ {0} IDs, Total Cycle Time", l_dyn_ids.Count);
 

@@ -4,23 +4,25 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO.Ports;
-using DynamixelCommander;
+using Dynamixel1Commander;
 
 namespace SeedDynamixelBenchmarking
 {
     partial class Program
     {
-        static void run_BULK_READ_benchmark(ref SerialPort port, ref List<byte> l_dyn_ids, byte b_read_startaddr, byte b_read_len, System.IO.TextWriter out_writter)
+
+        static void run_dyn1_READ_benchmark(ref SerialPort port, ref List<byte> l_dyn_ids, byte b_read_startaddr, byte b_read_len, System.IO.TextWriter out_writter)
         {
-            Console.WriteLine("#2 Read multiple devices using one BULK_READ command:");
+            Console.WriteLine();
+            Console.WriteLine("#1 DYNAMIXEL 1: Individual READ commands:");
             Console.WriteLine("==========================================");
             Console.WriteLine();
 
-            check_return_delay_times(ref port, l_dyn_ids);
+            dyn1_check_return_delay_times(ref port, l_dyn_ids);
 
             if (out_writter != null)
             {
-                out_writter.Write("BULK READ,Cycle Nr,");
+                out_writter.Write("READ,Cycle Nr,");
 
                 foreach (byte b_id in l_dyn_ids)
                 {
@@ -35,19 +37,9 @@ namespace SeedDynamixelBenchmarking
             long min_time_outercycle = long.MaxValue, max_time_outercycle = -1;
 
             Dynamixel1CommandGenerator dync = new Dynamixel1CommandGenerator();
-            int bytes_received = 0; long inner_cycle_time = 0;
+            int bytes_received = 0; long reply_time_innercycle = 0;
 
             StopWatchMicrosecs outer_timer = new StopWatchMicrosecs(); bool run_failed = false; int cycle_nr = 0;
-
-            // build BULK_READ command
-            // create per device parameter triplets
-            List<Dynamixel1BulkReadDeviceEntry> l_devicep = new List<Dynamixel1BulkReadDeviceEntry>();
-            foreach (byte b_id in l_dyn_ids)
-            {
-                l_devicep.Add(new Dynamixel1BulkReadDeviceEntry(b_id, b_read_startaddr, b_read_len));
-            }
-            byte[] command = dync.generate_bulkread_packet(l_devicep);
-
             for (cycle_nr = 0; cycle_nr < NUMBER_OF_CYCLES_PER_BENCHMARK; cycle_nr++)
             {
                 outer_timer.Reset();
@@ -55,31 +47,33 @@ namespace SeedDynamixelBenchmarking
 
                 if (out_writter != null)
                 {
-                    out_writter.Write("BULK READ,{0},", cycle_nr);
+                    out_writter.Write("READ,{0},", cycle_nr);
                 }
 
-                port.ReadExisting(); // purge any bytes in the incomming buffer
-                port.Write(command, 0, command.Length);
-
-                // get replies
                 foreach (byte b_id in l_dyn_ids)
                 {
                     run_failed = false;
 
-                    byte[] reply = dync.get_dyn_reply(port, b_id, (byte)(Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + b_read_len), 40000, ref bytes_received, ref inner_cycle_time);
+                    // make READ request
+                    byte[] command = dync.generate_read_packet(b_id, b_read_startaddr, b_read_len);
+
+                    port.ReadExisting(); // purge any bytes in the incomming buffer
+                    port.Write(command, 0, command.Length);
+
+                    byte[] reply = dync.get_dyn_reply(port, b_id, (byte)(Dynamixel1CommandGenerator.DYN1_REPLY_SZ_READ_MIN + b_read_len), 40000, ref bytes_received, ref reply_time_innercycle);
                     if (reply != null)
                     {
-                        if (out_writter != null) out_writter.Write("{0},", inner_cycle_time);
+                        if (out_writter != null) out_writter.Write("{0},", reply_time_innercycle);
 
-                        if (inner_cycle_time < min_time_innercycle)
+                        if (reply_time_innercycle < min_time_innercycle)
                         {
-                            min_time_innercycle = inner_cycle_time;
+                            min_time_innercycle = reply_time_innercycle;
                             min_time_innercycle_id = b_id;
                         }
 
-                        if (inner_cycle_time > max_time_innercycle)
+                        if (reply_time_innercycle > max_time_innercycle)
                         {
-                            max_time_innercycle = inner_cycle_time;
+                            max_time_innercycle = reply_time_innercycle;
                             max_time_innercycle_id = b_id;
                         }
                     }
@@ -87,25 +81,25 @@ namespace SeedDynamixelBenchmarking
                     {
                         // run fails
                         run_failed = true;
-                        if (out_writter != null) {
-                            Console.Write("BULK_READ fails at getting reply from ID: {0}. Reason: ", b_id);
-
+                        if (out_writter != null)
+                        {
+                            Console.Write("READ fails at ID: {0}. Reason: ", b_id);
                             switch (dync.last_get_dyn_reply_error)
                             {
                                 case Dynamixel1CommandGenerator.en_reply_result.TIMEOUT:
-                                    Console.WriteLine("FAILED Timeout");
+                                    Console.WriteLine("Timeout");
                                     break;
 
                                 case Dynamixel1CommandGenerator.en_reply_result.MISTMATCHED_DEVICE_ID:
-                                    Console.WriteLine("FAILED ID mismatch");
+                                    Console.WriteLine("ID mismatch");
                                     break;
 
                                 case Dynamixel1CommandGenerator.en_reply_result.INVALID_COMMAND_LEN:
-                                    Console.WriteLine("FAILED LEN error");
+                                    Console.WriteLine("LEN error");
                                     break;
 
                                 default:
-                                    Console.WriteLine("FAILED Other /unhandled");
+                                    Console.WriteLine("Other /unhandled");
                                     break;
                             }
                         }
@@ -124,14 +118,11 @@ namespace SeedDynamixelBenchmarking
                 }
                 else
                 {
-                    /* if run failed wait a few milisecs to attempt to get pending data and re-sync */
-                    System.Threading.Thread.Sleep(50);
-                    port.ReadExisting(); // purge port
-
                     failed_runs++;
                 }
 
-                Console.Write("\rCycle #{0}: Cycle time {1} uSec.  (Fastest so far {2} uSec; slowest so far {3} uSec. Failed runs: {4})     ", cycle_nr, (run_failed ? "FAILED" : outer_timer.ElapsedMicroseconds.ToString()), min_time_outercycle, max_time_outercycle, failed_runs);
+                Console.Write("\rCycle #{0}: Cycle time {1}uSecs.  (Fastest so far {2}uSecs; slowest so far {3}uSecs. Failed runs: {4})     ", cycle_nr, (run_failed ? "FAILED" : outer_timer.ElapsedMicroseconds.ToString()), min_time_outercycle, max_time_outercycle, failed_runs);
+
             }
 
 
@@ -147,8 +138,7 @@ namespace SeedDynamixelBenchmarking
                 avg = 0; std_dev = 0;
             }
 
-
-            Console.WriteLine("\rStatistics:                                                                              ");
+            Console.WriteLine("\rStatistics:                                                                           ");
             Console.WriteLine("\tCycles ran         : {0,5}", cycle_nr);
             Console.WriteLine("\tCycles failed      : {0,5} {1}", failed_runs, (failed_runs > 0 ? "(check if the IDs are all connected and responding)" : ""));
             Console.WriteLine("\tFastest Cycle time : {0,5} uSec", min_time_outercycle);

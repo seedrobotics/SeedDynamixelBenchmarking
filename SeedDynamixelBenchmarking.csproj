@@ -44,12 +44,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Auxiliary.cs" />
-    <Compile Include="BULK_READ_benchmark.cs" />
-    <Compile Include="DSYNC_READ_benchmark.cs" />
-    <Compile Include="DynamixelCommandGenerator.cs" />
+    <Compile Include="DYN1_BULK_READ_benchmark.cs" />
+    <Compile Include="DYN1_DSYNC_READ_benchmark.cs" />
+    <Compile Include="Dynamixel1CommandGenerator.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="READ_benchmark.cs" />
+    <Compile Include="DYN1_READ_benchmark.cs" />
+    <Compile Include="SCWCommandGenerator.cs" />
+    <Compile Include="SCW_DevelopmentTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

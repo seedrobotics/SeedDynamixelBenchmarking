@@ -4,3 +4,9 @@ C:\Seed Robotics GIT\TeensyLC_2dynamixel\SeedDynamixelBenchmarking\bin\Debug\See
 C:\Seed Robotics GIT\TeensyLC_2dynamixel\SeedDynamixelBenchmarking\obj\Debug\SeedDynamixelBenchmarking.exe
 C:\Seed Robotics GIT\TeensyLC_2dynamixel\SeedDynamixelBenchmarking\obj\Debug\SeedDynamixelBenchmarking.pdb
 C:\Seed Robotics GIT\TeensyLC_2dynamixel\SeedDynamixelBenchmarking\obj\Debug\SeedDynamixelBenchmarking.csprojResolveAssemblyReference.cache
+C:\Seed Robotics Git\SeedDynamixelBenchmarking\bin\Debug\SeedDynamixelBenchmarking.exe.config
+C:\Seed Robotics Git\SeedDynamixelBenchmarking\bin\Debug\SeedDynamixelBenchmarking.exe
+C:\Seed Robotics Git\SeedDynamixelBenchmarking\bin\Debug\SeedDynamixelBenchmarking.pdb
+C:\Seed Robotics Git\SeedDynamixelBenchmarking\obj\Debug\SeedDynamixelBenchmarking.csprojResolveAssemblyReference.cache
+C:\Seed Robotics Git\SeedDynamixelBenchmarking\obj\Debug\SeedDynamixelBenchmarking.exe
+C:\Seed Robotics Git\SeedDynamixelBenchmarking\obj\Debug\SeedDynamixelBenchmarking.pdb

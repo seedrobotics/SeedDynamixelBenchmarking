@@ -5,7 +5,7 @@ using System.Text;
 using System.IO.Ports;
 using System.Diagnostics;
 
-namespace DynamixelCommander
+namespace Dynamixel1Commander
 {
     /* this class provides higher resolution timing
        needed for benchmarking */
@@ -15,7 +15,7 @@ namespace DynamixelCommander
         {
             get
             {
-                // Stopwatch.Frequency returns the number of tocks per second; thus dividing ticks
+                // Stopwatch.Frequency returns the number of ticks per second; thus dividing ticks
                 // per the frequency as a double, to keep precision, and then multiplying by 1000 000 gives you Microsecs
                 return (long)(((double)base.ElapsedTicks / (double)Stopwatch.Frequency) * 1000000.0);
             }
@@ -209,7 +209,7 @@ namespace DynamixelCommander
             // locate the header in the reply;
             // do so to trim any data that could had been left in the buffer
             bool header_found = false;
-            for(byte b=0; b < reply.Length - 1; b++)
+            for(byte b = 0; b < reply.Length - 1; b++)
             {
                 if (reply[b] == 0xff && reply[b+1] == 0xff) // we can do b+1 without checkoing boundaries bc the for loop is b < reply.length-1
                 {
